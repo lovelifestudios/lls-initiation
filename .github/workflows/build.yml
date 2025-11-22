@@ -1,0 +1,70 @@
+name: CI/CD: Automated Build, Push to ECR, and Deploy to ECS
+
+on:
+  push:
+    # Trigger ONLY when code is merged into the stable 'main' branch
+    branches:
+      - main 
+
+env:
+  # ECR Configuration (Confirmed from your setup)
+  ECR_REGISTRY_BASE: 272259385107.dkr.ecr.us-west-1.amazonaws.com
+  ECR_REPOSITORY: prod/lls
+  AWS_REGION: us-west-1 
+  
+  # ECS Deployment Configuration (Use your actual resource names here)
+  ECS_CLUSTER_NAME: lls-prod-cluster           # <-- REPLACE with your ECS Cluster name
+  ECS_SERVICE_NAME: lls-web-service            # <-- REPLACE with your ECS Service name
+  ECS_TASK_DEFINITION_PATH: ecs-task-definition.json 
+  ECS_CONTAINER_NAME: lls-app-container        # <-- REPLACE with your container name in the Task Definition
+
+jobs:
+  build-and-deploy:
+    name: Docker Build, Push & Deploy
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v4
+      
+    - name: Configure AWS Credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        # Requires AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY secrets to be set in GitHub
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ env.AWS_REGION }}
+
+    - name: Login to AWS ECR
+      id: login-ecr
+      uses: aws-actions/amazon-ecr-login@v2
+      
+    # 1. Build and Push (Automating your manual step)
+    - name: Build and Push Docker Image
+      id: build-image
+      env:
+        # Use the git SHA for a unique, traceable tag (e.g., prod/lls:a1b2c3d4e5f6)
+        IMAGE_URI: ${{ env.ECR_REGISTRY_BASE }}/${{ env.ECR_REPOSITORY }}:${{ github.sha }} 
+      run: |
+        echo "Building and tagging image with SHA: $IMAGE_URI"
+        docker build -t $IMAGE_URI .
+        docker push $IMAGE_URI
+        echo "image_uri=$IMAGE_URI" >> $GITHUB_OUTPUT 
+
+    # 2. Deploy to ECS (Continuous Deployment)
+    - name: Update ECS Task Definition
+      uses: aws-actions/amazon-ecs-render-task-definition@v1
+      id: render-task
+      with:
+        # Updates the image tag in your local JSON file with the newly pushed URI
+        task-definition: ${{ env.ECS_TASK_DEFINITION_PATH }}
+        container-name: ${{ env.ECS_CONTAINER_NAME }}
+        image: ${{ steps.build-image.outputs.image_uri }}
+
+    - name: Deploy to ECS Service
+      uses: aws-actions/amazon-ecs-deploy-task-definition@v1
+      with:
+        task-definition: ${{ steps.render-task.outputs.task-definition }}
+        service: ${{ env.ECS_SERVICE_NAME }}
+        cluster: ${{ env.ECS_CLUSTER_NAME }}
+        wait-for-service-stability: true
