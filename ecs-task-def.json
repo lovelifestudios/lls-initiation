@@ -1,0 +1,38 @@
+{
+  "family": "prod-lls",
+  "taskRoleArn": "arn:aws:iam::272259385107:role/lls-app-role",
+  "executionRoleArn": "arn:aws:iam::272259385107:role/ecsTaskExecutionRolePolicy",
+  "networkMode": "awsvpc",
+  "requiresCompatibilities": ["FARGATE"],
+  "cpu": "1024",
+  "memory": "3072",
+  "runtimePlatform": {
+    "cpuArchitecture": "X86_64",
+    "operatingSystemFamily": "LINUX"
+  },
+  "containerDefinitions": [
+    {
+      "name": "app",
+      "essential": true,
+      "image": "272259385107.dkr.ecr.us-west-1.amazonaws.com/prod/lls:main",
+      "portMappings": [
+        {
+          "containerPort": 8080,
+          "hostPort": 8080,
+          "protocol": "tcp",
+          "appProtocol": "http",
+          "name": "lls-container"
+        }
+      ],
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "/ecs/prod-lls",
+          "awslogs-create-group": "true",
+          "awslogs-region": "us-west-1",
+          "awslogs-stream-prefix": "ecs"
+        }
+      }
+    }
+  ]
+}
