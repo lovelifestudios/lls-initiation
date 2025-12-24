@@ -11,7 +11,6 @@ __pycache__/
 
 # Ignore local Node/Frontend artifacts
 node_modules/
-package-lock.json
 
 # Ignore AWS/Deployment configs (Should stay on your local machine)
 ecs-task-def.json
