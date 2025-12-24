@@ -1,0 +1,24 @@
+# Ignore git history (speeds up build context transfer)
+.git
+.gitignore
+.github
+
+# Ignore local Python artifacts
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Ignore local Node/Frontend artifacts
+node_modules/
+package-lock.json
+
+# Ignore AWS/Deployment configs (Should stay on your local machine)
+ecs-task-def.json
+AWSCLIV2.pkg
+
+# Ignore OS-specific junk
+.DS_Store
+
+# Ignore documentation
+README.md
